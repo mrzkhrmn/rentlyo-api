@@ -1,0 +1,43 @@
+## .NET build
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+## IDE / VS
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+## Secrets & env
+.env
+.env.*
+!.env.example
+!**/.env*.example
+appsettings.*.local.json
+**/secrets.json
+
+## Test / coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+
+## Logs & OS
+*.log
+logs/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+## Misc
+*.swp
+*~

@@ -1,0 +1,8 @@
+**/bin
+**/obj
+**/.vs
+**/.idea
+Dockerfile
+.dockerignore
+**/*.user
+**/*.http

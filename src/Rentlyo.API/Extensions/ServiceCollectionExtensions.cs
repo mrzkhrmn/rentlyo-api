@@ -1,0 +1,100 @@
+using System.Text;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Rentlyo.Application.Options;
+
+namespace Rentlyo.API.Extensions;
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        });
+        services.AddOpenApi();
+        services.AddEndpointsApiExplorer();
+
+        var jwtSecret = configuration["JWT_SECRET"]
+            ?? configuration["Jwt:Secret"]
+            ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
+
+        services.Configure<JwtOptions>(options =>
+        {
+            configuration.GetSection(JwtOptions.SectionName).Bind(options);
+            options.Secret = jwtSecret;
+            if (string.IsNullOrWhiteSpace(options.Issuer))
+            {
+                options.Issuer = "Rentlyo";
+            }
+
+            if (string.IsNullOrWhiteSpace(options.Audience))
+            {
+                options.Audience = "Rentlyo";
+            }
+        });
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime = true,
+                    ValidIssuer = configuration["Jwt:Issuer"] ?? "Rentlyo",
+                    ValidAudience = configuration["Jwt:Audience"] ?? "Rentlyo",
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                    ClockSkew = TimeSpan.FromMinutes(1),
+                    NameClaimType = "sub",
+                    RoleClaimType = "role"
+                };
+            });
+
+        services.AddAuthorization();
+
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "Rentlyo API",
+                Version = "v1",
+                Description = "Vehicle rental SaaS API"
+            });
+
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "JWT Authorization header using the Bearer scheme."
+            });
+
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+            });
+        });
+
+        var frontendOrigin = configuration["FRONTEND_ORIGIN"] ?? "http://localhost:3000";
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy("Frontend", policy =>
+            {
+                policy
+                    .WithOrigins(frontendOrigin)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+            });
+        });
+
+        return services;
+    }
+}

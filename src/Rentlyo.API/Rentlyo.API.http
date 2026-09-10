@@ -1,0 +1,6 @@
+@Rentlyo.API_HostAddress = http://localhost:5112
+
+GET {{Rentlyo.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
