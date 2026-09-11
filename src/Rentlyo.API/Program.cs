@@ -16,6 +16,7 @@ await DatabaseInitializer.InitializeAsync(app.Services);
 
 HangfireJobs.RegisterRecurringJobs(app.Services.GetRequiredService<IRecurringJobManager>());
 
+app.UseExceptionHandler();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
