@@ -17,6 +17,7 @@ public class AuthService(
     ApplicationDbContext db,
     IJwtTokenService jwtTokenService,
     IEmailSender emailSender,
+    ISubscriptionService subscriptionService,
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
     private readonly PasswordHasher<User> _passwordHasher = new();
@@ -52,6 +53,7 @@ public class AuthService(
             Slug = slug,
             PlanId = freePlan.Id,
             Status = TenantStatus.Active,
+            WebsiteEnabled = false,
             CreatedAt = DateTime.UtcNow,
             Plan = freePlan
         };
@@ -84,6 +86,8 @@ public class AuthService(
         db.TenantSettings.Add(settings);
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
+
+        await subscriptionService.EnsureSubscriptionForTenantAsync(tenant.Id, freePlan.Id, cancellationToken);
 
         return await IssueTokensAsync(user, cancellationToken);
     }

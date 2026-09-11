@@ -16,14 +16,29 @@ public class TenantContextMiddleware(RequestDelegate next)
     {
         if (httpContext.User.Identity?.IsAuthenticated == true)
         {
-            var userIdValue = httpContext.User.FindFirstValue("sub")
-                ?? httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var tenantIdValue = httpContext.User.FindFirstValue("tenant_id");
             var role = httpContext.User.FindFirstValue("role")
                 ?? httpContext.User.FindFirstValue(ClaimTypes.Role)
                 ?? string.Empty;
+            var isPlatformAdmin = httpContext.User.FindFirstValue("is_platform_admin") == "true"
+                || string.Equals(role, "PlatformAdmin", StringComparison.OrdinalIgnoreCase);
 
-            if (!Guid.TryParse(userIdValue, out var userId) || !Guid.TryParse(tenantIdValue, out var tenantId))
+            var userIdValue = httpContext.User.FindFirstValue("sub")
+                ?? httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userIdValue, out var userId))
+            {
+                throw new UnauthorizedAppException("Invalid user claims.");
+            }
+
+            if (isPlatformAdmin)
+            {
+                tenantContext.Set(Guid.Empty, userId, "PlatformAdmin");
+                await next(httpContext);
+                return;
+            }
+
+            var tenantIdValue = httpContext.User.FindFirstValue("tenant_id");
+            if (!Guid.TryParse(tenantIdValue, out var tenantId))
             {
                 throw new UnauthorizedAppException("Invalid tenant claims.");
             }

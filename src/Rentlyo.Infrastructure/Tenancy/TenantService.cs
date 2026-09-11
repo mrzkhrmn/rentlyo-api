@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Rentlyo.Application.DTOs.Subscriptions;
 using Rentlyo.Application.DTOs.Tenant;
 using Rentlyo.Application.Interfaces;
 using Rentlyo.Domain.Constants;
@@ -10,7 +11,8 @@ namespace Rentlyo.Infrastructure.Tenancy;
 
 public class TenantService(
     ApplicationDbContext db,
-    ITenantContext tenantContext) : ITenantService
+    ITenantContext tenantContext,
+    ISubscriptionService subscriptionService) : ITenantService
 {
     public async Task<TenantResponse> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
@@ -40,9 +42,32 @@ public class TenantService(
         tenant.Address = NormalizeOptional(request.Address);
         tenant.TaxNumber = NormalizeOptional(request.TaxNumber);
         tenant.LogoUrl = NormalizeOptional(request.LogoUrl);
+        tenant.Description = NormalizeOptional(request.Description);
+
+        if (!string.IsNullOrWhiteSpace(request.PrimaryColor))
+        {
+            var color = request.PrimaryColor.Trim();
+            if (!Public.PublicCatalogService.IsValidHexColor(color))
+            {
+                throw new ValidationException("Primary color must be a hex value like #0F766E.");
+            }
+
+            tenant.PrimaryColor = color;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.AccentColor))
+        {
+            var color = request.AccentColor.Trim();
+            if (!Public.PublicCatalogService.IsValidHexColor(color))
+            {
+                throw new ValidationException("Accent color must be a hex value like #F59E0B.");
+            }
+
+            tenant.AccentColor = color;
+        }
 
         await db.SaveChangesAsync(cancellationToken);
-        return MapTenant(tenant);
+        return await GetCurrentAsync(cancellationToken);
     }
 
     public async Task<TenantSettingsResponse> GetSettingsAsync(CancellationToken cancellationToken = default)
@@ -77,7 +102,11 @@ public class TenantService(
     public async Task<IReadOnlyList<PlanResponse>> ListPlansAsync(CancellationToken cancellationToken = default)
     {
         EnsureAuthenticated();
+        return await ListPlansPublicAsync(cancellationToken);
+    }
 
+    public async Task<IReadOnlyList<PlanResponse>> ListPlansPublicAsync(CancellationToken cancellationToken = default)
+    {
         return await db.SubscriptionPlans
             .AsNoTracking()
             .Where(x => x.IsActive)
@@ -88,7 +117,9 @@ public class TenantService(
                 Code = x.Code,
                 Name = x.Name,
                 MaxVehicles = x.MaxVehicles,
-                MaxUsers = x.MaxUsers
+                MaxUsers = x.MaxUsers,
+                MonthlyPrice = x.MonthlyPrice,
+                Currency = x.Currency
             })
             .ToListAsync(cancellationToken);
     }
@@ -97,21 +128,10 @@ public class TenantService(
         ChangePlanRequest request,
         CancellationToken cancellationToken = default)
     {
-        EnsureCanManageSettings();
-
-        var plan = await db.SubscriptionPlans
-            .FirstOrDefaultAsync(x => x.Id == request.PlanId && x.IsActive, cancellationToken)
-            ?? throw new NotFoundException("Plan not found.");
-
-        var tenant = await db.Tenants
-            .Include(x => x.Plan)
-            .FirstOrDefaultAsync(x => x.Id == tenantContext.TenantId, cancellationToken)
-            ?? throw new NotFoundException("Tenant not found.");
-
-        tenant.PlanId = plan.Id;
-        tenant.Plan = plan;
-        await db.SaveChangesAsync(cancellationToken);
-        return MapTenant(tenant);
+        await subscriptionService.ChangePlanAsync(
+            new ChangeSubscriptionPlanRequest { PlanId = request.PlanId },
+            cancellationToken);
+        return await GetCurrentAsync(cancellationToken);
     }
 
     private async Task<Tenant> LoadTenantAsync(CancellationToken cancellationToken)
@@ -119,6 +139,7 @@ public class TenantService(
         return await db.Tenants
             .AsNoTracking()
             .Include(x => x.Plan)
+            .Include(x => x.Subscription)
             .FirstOrDefaultAsync(x => x.Id == tenantContext.TenantId, cancellationToken)
             ?? throw new NotFoundException("Tenant not found.");
     }
@@ -177,6 +198,10 @@ public class TenantService(
         Address = tenant.Address,
         TaxNumber = tenant.TaxNumber,
         LogoUrl = tenant.LogoUrl,
+        Description = tenant.Description,
+        PrimaryColor = tenant.PrimaryColor,
+        AccentColor = tenant.AccentColor,
+        WebsiteEnabled = tenant.WebsiteEnabled,
         CreatedAt = tenant.CreatedAt,
         Plan = new PlanResponse
         {
@@ -184,8 +209,11 @@ public class TenantService(
             Code = tenant.Plan.Code,
             Name = tenant.Plan.Name,
             MaxVehicles = tenant.Plan.MaxVehicles,
-            MaxUsers = tenant.Plan.MaxUsers
-        }
+            MaxUsers = tenant.Plan.MaxUsers,
+            MonthlyPrice = tenant.Plan.MonthlyPrice,
+            Currency = tenant.Plan.Currency
+        },
+        SubscriptionStatus = tenant.Subscription?.Status.ToString()
     };
 
     private static TenantSettingsResponse MapSettings(TenantSettings settings) => new()

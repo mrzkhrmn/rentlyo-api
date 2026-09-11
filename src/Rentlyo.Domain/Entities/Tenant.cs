@@ -13,9 +13,14 @@ public class Tenant
     public string? Address { get; set; }
     public string? TaxNumber { get; set; }
     public string? LogoUrl { get; set; }
+    public string? Description { get; set; }
+    public string PrimaryColor { get; set; } = "#0F766E";
+    public string AccentColor { get; set; } = "#F59E0B";
+    public bool WebsiteEnabled { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public SubscriptionPlan Plan { get; set; } = null!;
     public TenantSettings Settings { get; set; } = null!;
+    public Subscription? Subscription { get; set; }
     public ICollection<User> Users { get; set; } = new List<User>();
 }

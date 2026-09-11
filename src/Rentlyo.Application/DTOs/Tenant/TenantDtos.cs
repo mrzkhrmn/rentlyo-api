@@ -7,6 +7,8 @@ public class PlanResponse
     public string Name { get; set; } = string.Empty;
     public int MaxVehicles { get; set; }
     public int MaxUsers { get; set; }
+    public decimal MonthlyPrice { get; set; }
+    public string Currency { get; set; } = "TRY";
 }
 
 public class TenantResponse
@@ -19,7 +21,12 @@ public class TenantResponse
     public string? Address { get; set; }
     public string? TaxNumber { get; set; }
     public string? LogoUrl { get; set; }
+    public string? Description { get; set; }
+    public string PrimaryColor { get; set; } = "#0F766E";
+    public string AccentColor { get; set; } = "#F59E0B";
+    public bool WebsiteEnabled { get; set; }
     public PlanResponse Plan { get; set; } = null!;
+    public string? SubscriptionStatus { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
@@ -30,6 +37,9 @@ public class UpdateTenantProfileRequest
     public string? Address { get; set; }
     public string? TaxNumber { get; set; }
     public string? LogoUrl { get; set; }
+    public string? Description { get; set; }
+    public string? PrimaryColor { get; set; }
+    public string? AccentColor { get; set; }
 }
 
 public class TenantSettingsResponse

@@ -18,6 +18,10 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(x => x.Address).HasMaxLength(500);
         builder.Property(x => x.TaxNumber).HasMaxLength(50);
         builder.Property(x => x.LogoUrl).HasMaxLength(500);
+        builder.Property(x => x.Description).HasMaxLength(2000);
+        builder.Property(x => x.PrimaryColor).HasMaxLength(16).IsRequired();
+        builder.Property(x => x.AccentColor).HasMaxLength(16).IsRequired();
+        builder.Property(x => x.WebsiteEnabled).HasDefaultValue(false);
 
         builder.HasOne(x => x.Plan)
             .WithMany(x => x.Tenants)

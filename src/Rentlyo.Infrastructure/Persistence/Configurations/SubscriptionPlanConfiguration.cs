@@ -12,6 +12,8 @@ public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<Subscripti
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.MonthlyPrice).HasPrecision(18, 2);
+        builder.Property(x => x.Currency).HasMaxLength(8).IsRequired();
         builder.HasIndex(x => x.Code).IsUnique();
     }
 }

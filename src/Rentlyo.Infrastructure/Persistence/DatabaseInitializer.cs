@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Rentlyo.Application.Interfaces;
 
 namespace Rentlyo.Infrastructure.Persistence;
 
@@ -12,6 +13,7 @@ public static class DatabaseInitializer
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
+        var platformService = scope.ServiceProvider.GetRequiredService<IPlatformService>();
 
         const int maxAttempts = 15;
 
@@ -21,11 +23,12 @@ public static class DatabaseInitializer
             {
                 await db.Database.MigrateAsync();
                 logger.LogInformation("Database migrated successfully");
+                await platformService.EnsureSeedAdminAsync();
+                logger.LogInformation("Platform admin seed ensured");
                 return;
             }
             catch (SqlException ex) when (ex.Number == 1801)
             {
-                // Race: EF tried CREATE DATABASE while SQL Server already has it.
                 logger.LogWarning(
                     "Database already exists (attempt {Attempt}/{Max}). Retrying migrate...",
                     attempt,
@@ -43,8 +46,9 @@ public static class DatabaseInitializer
             await Task.Delay(TimeSpan.FromSeconds(2));
         }
 
-        // Final attempt — let it throw if it still fails.
         await db.Database.MigrateAsync();
         logger.LogInformation("Database migrated successfully");
+        await platformService.EnsureSeedAdminAsync();
+        logger.LogInformation("Platform admin seed ensured");
     }
 }

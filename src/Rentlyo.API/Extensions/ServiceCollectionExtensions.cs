@@ -83,13 +83,18 @@ public static class ServiceCollectionExtensions
         });
 
         var frontendOrigin = configuration["FRONTEND_ORIGIN"] ?? "http://localhost:3000";
+        var platformAdminOrigin = configuration["PLATFORM_ADMIN_ORIGIN"] ?? "http://localhost:3001";
+        var corsOrigins = new[] { frontendOrigin, platformAdminOrigin }
+            .Where(origin => !string.IsNullOrWhiteSpace(origin))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
         services.AddCors(options =>
         {
             options.AddPolicy("Frontend", policy =>
             {
                 policy
-                    .WithOrigins(frontendOrigin)
+                    .WithOrigins(corsOrigins)
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });

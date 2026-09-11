@@ -9,6 +9,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantSettings> TenantSettings => Set<TenantSettings>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -18,6 +20,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<VehicleCategory> VehicleCategories => Set<VehicleCategory>();
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
     public DbSet<VehicleImage> VehicleImages => Set<VehicleImage>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerDocument> CustomerDocuments => Set<CustomerDocument>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Reservation> Reservations => Set<Reservation>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentRefund> PaymentRefunds => Set<PaymentRefund>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+    public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<PlatformUser> PlatformUsers => Set<PlatformUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +48,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 Name = "Free",
                 MaxVehicles = 5,
                 MaxUsers = 2,
+                MonthlyPrice = 0m,
+                Currency = "TRY",
                 IsActive = true
             },
             new SubscriptionPlan
@@ -46,6 +59,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 Name = "Starter",
                 MaxVehicles = 25,
                 MaxUsers = 10,
+                MonthlyPrice = 499m,
+                Currency = "TRY",
                 IsActive = true
             },
             new SubscriptionPlan
@@ -55,6 +70,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 Name = "Pro",
                 MaxVehicles = 100,
                 MaxUsers = 50,
+                MonthlyPrice = 1499m,
+                Currency = "TRY",
                 IsActive = true
             });
     }

@@ -26,6 +26,26 @@ public class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenService
             new("role", user.Role.Name)
         };
 
+        return WriteToken(claims, expires);
+    }
+
+    public (string Token, int ExpiresInSeconds) CreatePlatformAccessToken(PlatformUser user)
+    {
+        var expires = DateTime.UtcNow.AddMinutes(_options.AccessTokenMinutes);
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(ClaimTypes.Role, "PlatformAdmin"),
+            new("role", "PlatformAdmin"),
+            new("is_platform_admin", "true")
+        };
+
+        return WriteToken(claims, expires);
+    }
+
+    private (string Token, int ExpiresInSeconds) WriteToken(List<Claim> claims, DateTime expires)
+    {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

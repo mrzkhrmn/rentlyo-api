@@ -9,5 +9,6 @@ public interface ITenantService
     Task<TenantSettingsResponse> GetSettingsAsync(CancellationToken cancellationToken = default);
     Task<TenantSettingsResponse> UpdateSettingsAsync(UpdateTenantSettingsRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PlanResponse>> ListPlansAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PlanResponse>> ListPlansPublicAsync(CancellationToken cancellationToken = default);
     Task<TenantResponse> ChangePlanAsync(ChangePlanRequest request, CancellationToken cancellationToken = default);
 }
