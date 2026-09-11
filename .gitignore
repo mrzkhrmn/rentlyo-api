@@ -12,9 +12,6 @@
 *.sln.docstates
 *.rsuser
 .idea/
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json.example
 
 ## Secrets & env
 .env
@@ -41,3 +38,7 @@ Desktop.ini
 ## Misc
 *.swp
 *~
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore

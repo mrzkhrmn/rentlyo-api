@@ -1,9 +1,12 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Rentlyo.API.Exceptions;
 using Rentlyo.Application.Options;
+using Rentlyo.Shared.Responses;
 
 namespace Rentlyo.API.Extensions;
 
@@ -15,6 +18,23 @@ public static class ServiceCollectionExtensions
         {
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
+
+        services.Configure<ApiBehaviorOptions>(options =>
+        {
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var message = context.ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Invalid request." : e.ErrorMessage)
+                    .FirstOrDefault() ?? "Invalid request.";
+
+                return new BadRequestObjectResult(ApiResponse<object>.Failure(message));
+            };
+        });
+
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddProblemDetails();
+
         services.AddOpenApi();
         services.AddEndpointsApiExplorer();
 
@@ -40,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -52,6 +73,30 @@ public static class ServiceCollectionExtensions
                     ClockSkew = TimeSpan.FromMinutes(1),
                     NameClaimType = "sub",
                     RoleClaimType = "role"
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+
+                        var message = string.IsNullOrWhiteSpace(context.ErrorDescription)
+                            ? "Authentication required."
+                            : context.ErrorDescription;
+
+                        await ApiErrorResponseWriter.WriteAsync(
+                            context.HttpContext,
+                            StatusCodes.Status401Unauthorized,
+                            message);
+                    },
+                    OnForbidden = async context =>
+                    {
+                        await ApiErrorResponseWriter.WriteAsync(
+                            context.HttpContext,
+                            StatusCodes.Status403Forbidden,
+                            "You do not have permission to perform this action.");
+                    }
                 };
             });
 

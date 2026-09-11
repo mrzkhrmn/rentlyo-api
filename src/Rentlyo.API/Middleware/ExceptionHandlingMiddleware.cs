@@ -1,17 +1,10 @@
 using System.Net;
-using System.Text.Json;
-using Rentlyo.Shared.Exceptions;
-using Rentlyo.Shared.Responses;
+using Rentlyo.API.Exceptions;
 
 namespace Rentlyo.API.Middleware;
 
 public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -20,35 +13,22 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         }
         catch (Exception exception)
         {
-            await HandleExceptionAsync(context, exception);
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
+            var (statusCode, _) = ApiErrorResponseWriter.MapException(exception);
+            if (statusCode >= (int)HttpStatusCode.InternalServerError)
+            {
+                logger.LogError(exception, "Unhandled exception");
+            }
+            else
+            {
+                logger.LogWarning(exception, "Handled application exception");
+            }
+
+            await ApiErrorResponseWriter.WriteExceptionAsync(context, exception);
         }
-    }
-
-    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
-    {
-        var (statusCode, message) = exception switch
-        {
-            ValidationException validationException => (HttpStatusCode.BadRequest, validationException.Message),
-            NotFoundException notFoundException => (HttpStatusCode.NotFound, notFoundException.Message),
-            UnauthorizedAppException unauthorizedException => (HttpStatusCode.Unauthorized, unauthorizedException.Message),
-            ForbiddenException forbiddenException => (HttpStatusCode.Forbidden, forbiddenException.Message),
-            BusinessException businessException => (HttpStatusCode.Conflict, businessException.Message),
-            _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
-        };
-
-        if (statusCode == HttpStatusCode.InternalServerError)
-        {
-            logger.LogError(exception, "Unhandled exception");
-        }
-        else
-        {
-            logger.LogWarning(exception, "Handled application exception");
-        }
-
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = (int)statusCode;
-
-        var payload = ApiResponse<object>.Failure(message);
-        await context.Response.WriteAsync(JsonSerializer.Serialize(payload, JsonOptions));
     }
 }
